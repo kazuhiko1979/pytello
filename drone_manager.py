@@ -9,18 +9,21 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 DEFAULT_DISTANCE = 0.30
+DEFAULT_SPEED = 10
+DEFAULT_DEGREE = 10
+
 
 class DroneManager(object):
     def __init__(self, host_ip='192.168.10.2', host_port=8889,
                  drone_ip='192.168.10.1', drone_port=8889,
-                 is_imperial=False):
-        # self.receive_response_thread = None
+                 is_imperial=False, speed=DEFAULT_SPEED):
         self.host_ip = host_ip
         self.host_port = host_port
         self.drone_ip = drone_ip
         self.drone_port = drone_port
         self.drone_address = (drone_ip, drone_port)
         self.is_imperial = is_imperial
+        self.speed = speed
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((self.host_ip, self.host_port))
 
@@ -32,6 +35,7 @@ class DroneManager(object):
         self._response_thread.start()
         self.send_command('command')
         self.send_command('streamon')
+        self.set_speed(speed)
 
     def receive_response(self, stop_event):
         while not stop_event.is_set():
@@ -108,12 +112,49 @@ class DroneManager(object):
     def back(self, distance=DEFAULT_DISTANCE):
         return self.move('back', distance)
 
+    def set_speed(self, speed):
+        return self.send_command(f'speed {speed}')
+        # return self.send_command('{0} {1]'.format(speed, speed))
+
+    def clockwise(self, degree=DEFAULT_DEGREE):
+        return self.send_command(f'cw {degree}')
+        # return self.send_command('{0} {1}'.format(cw, degree))
+
+    def counter_clockwise(self, degree=DEFAULT_DEGREE):
+        return self.send_command(f'ccw {degree}')
+        # return self.send_command('{0} {1}'.format(ccw, degree))
+
+    def flip_front(self):
+        return self.send_command('flip f')
+
+    def flip_back(self):
+        return self.send_command('flip b')
+
+    def flip_left(self):
+        return self.send_command('flip ')
+
+    def flip_right(self):
+        return self.send_command('flip r')
+
 
 if __name__ == '__main__':
     drone_manager = DroneManager()
-    drone_manager.takeoff()
 
-    time.sleep(10)
+    drone_manager.set_speed(100)
+    drone_manager.takeoff()
+    time.sleep(5)
+    drone_manager.flip_front()
+    time.sleep(5)
+    drone_manager.flip_back()
+    time.sleep(5)
+    drone_manager.flip_left()
+    time.sleep(5)
+    drone_manager.flip_right()
+    time.sleep(5)
+    drone_manager.clockwise(90)
+    time.sleep(5)
+    drone_manager.counter_clockwise(90)
+    time.sleep(5)
     drone_manager.forward()
     time.sleep(5)
     drone_manager.right()
@@ -121,6 +162,9 @@ if __name__ == '__main__':
     drone_manager.back()
     time.sleep(5)
     drone_manager.left()
+
+    drone_manager.set_speed(10)
+
     time.sleep(5)
     drone_manager.up()
     time.sleep(5)
