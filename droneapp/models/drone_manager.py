@@ -1,11 +1,10 @@
 import logging
+import contextlib
 import socket
-import sys
 import threading
 import time
 
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 DEFAULT_DISTANCE = 0.30
@@ -33,6 +32,12 @@ class DroneManager(object):
                                            args=(self.stop_event, ))
 
         self._response_thread.start()
+
+        self.patrol_event = None
+        self.is_patrol = False
+        self.is_patrol_semaphore = threading.Semaphore(1)
+        self._thread_patrol = None
+
         self.send_command('command')
         self.send_command('streamon')
         self.set_speed(speed)
@@ -136,39 +141,44 @@ class DroneManager(object):
     def flip_right(self):
         return self.send_command('flip r')
 
+    def patrol(self):
+        if not self.is_patrol:
+            self.patrol_event = threading.Event()
+            self._thread_patrol = threading.Thread(
+                target=self._patrol,
+                args=(self.is_patrol_semaphore, self.patrol_event,))
+            self._thread_patrol.start()
+            self.is_patrol = True
 
-if __name__ == '__main__':
-    drone_manager = DroneManager()
+    def stop_patrol(self):
+        if self.is_patrol:
+            self.patrol_event.set()
+            retry = 0
+            while self._thread_patrol.is_alive():
+                time.sleep(0.3)
+                if retry > 300:
+                    break
+                retry += 1
+            self.is_patrol = False
 
-    drone_manager.set_speed(100)
-    drone_manager.takeoff()
-    time.sleep(5)
-    drone_manager.flip_front()
-    time.sleep(5)
-    drone_manager.flip_back()
-    time.sleep(5)
-    drone_manager.flip_left()
-    time.sleep(5)
-    drone_manager.flip_right()
-    time.sleep(5)
-    drone_manager.clockwise(90)
-    time.sleep(5)
-    drone_manager.counter_clockwise(90)
-    time.sleep(5)
-    drone_manager.forward()
-    time.sleep(5)
-    drone_manager.right()
-    time.sleep(5)
-    drone_manager.back()
-    time.sleep(5)
-    drone_manager.left()
+    def _patrol(self, semaphore, stop_event):
+        is_acquire = semaphore.acquire(blocking=False)
+        if is_acquire:
+            logger.info({'action': '_patrol', 'status': 'acquire'})
+            with contextlib.ExitStack() as stack:
+                stack.callback(semaphore.release)
+                status = 0
+                while not stop_event.is_set():
+                    status += 1
+                    if status == 1:
+                        self.up()
+                    if status == 2:
+                        self.clockwise(90)
+                    if status == 3:
+                        self.down()
+                    if status == 4:
+                        status = 0
+                    time.sleep(5)
 
-    drone_manager.set_speed(10)
-
-    time.sleep(5)
-    drone_manager.up()
-    time.sleep(5)
-    drone_manager.down()
-
-    drone_manager.land()
-    drone_manager.stop()
+        else:
+            logger.warning({'action': '_patrol', 'status': 'not_acquire'})

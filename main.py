@@ -1,8 +1,8 @@
-print('test')
+import logging
+import sys
 
-print('test')
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
-print('test')
 
 
 
