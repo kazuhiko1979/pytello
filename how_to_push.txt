@@ -1,5 +1,0 @@
-git init
-git remote add origin https://github.com/kazuhiko1979/pytello.git
-git add filename
-git commit -m "commet"
-git push -u origin master

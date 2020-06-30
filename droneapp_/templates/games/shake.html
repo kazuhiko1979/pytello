@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script>
+    function sendStartShake() {
+        let id = $("input[name='coursePick']:checked").val();
+        $.post("/api/shake/start", {id: id}.done(function (data) {
+            $("#result").html(data.result) ;
+        }, 'json')
+    }
+    var shakeEvent = new Shake();
+    shakeEvent.start();
+
+    window.addEventListener('shake', shakeEvenDidOccur, false);
+
+    //function to call when shake occurs
+    function shakeEventDidOccur() {
+        let id = $("input[name='coursePick']:checked").val();
+        $.post("/api/shake/run", {id: id}.done(function (data) {
+            let result = data.elapsed.toFixed(2).toString();
+            result += 's';
+            if (data.running === false){
+                result += "<br>Done";
+            }
+            $("#result").html(result);
+        }, 'json');
+    }
+</script>
+
+<div align="center">
+    <h1>Shake</h1>
+    <div id="result"></div>
+</div>
+
+<fieldset data-role="controlgroup">
+    {% for id, course in courses.items() %}
+    <input type="radio" name="coursePick" id="radio-choice-v-{{ id }}a" value="{{ id }}"
+     {% if id == 1 %}checked{% endif %}>
+    <label for="radio-choice-v-{{ id }}a">{{ course.name }}</label>
+    {% endfor %}
+
+</fieldset>
+
+<a href="#" data-role="button" onclick="sendStartShake(); return false;">Start</a>
+
+{% endblock %}

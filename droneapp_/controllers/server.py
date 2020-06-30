@@ -5,7 +5,8 @@ from flask import render_template
 from flask import request
 from flask import Response
 
-from droneapp.models.drone_manager import DroneManager
+import droneapp_.models.course
+from droneapp_.models.drone_manager import DroneManager
 
 import config
 
@@ -75,6 +76,11 @@ def command():
         drone.enable_face_detect()
     if cmd == 'stopFaceDetectAndTrack':
         drone.disable_face_detect()
+    if cmd == 'snapshot':
+        if drone.snapshot():
+            return jsonify(status='success'), 200
+        else:
+            return jsonify(status='fail'), 400
 
     return jsonify(status='success'), 200
 
@@ -90,6 +96,40 @@ def video_generator():
 @app.route('/video/streaming')
 def video_feed():
     return Response(video_generator(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+def get_courses(course_id=None):
+    drone = get_drone()
+    courses = droneapp_.models.course.get_courses(drone)
+    if course_id:
+        return courses.get(course_id)
+    return courses
+
+
+@app.route('/games/shake/')
+def game_shake():
+    courses = get_courses()
+    return render_template('games/shake.html', courses=courses)
+
+
+@app.route('/api/shake/start', methods=['GET', 'POST'])
+def shake_start():
+    # course_id = request.args.get('id')
+    course_id = request.form.get('id')
+    course = get_courses(int(course_id))
+    course.start()
+    return jsonify(result='started'), 200
+
+
+@app.route('/api/shake/run', methods=['GET', 'POST'])
+def shake_run():
+    # course_id = request.args.get('id')
+    course_id = request.form.get('id')
+    course = get_courses(int(course_id))
+    course.run()
+    return jsonify(
+        elapsed=course.elapsed,
+        status=course.status,
+        running=course.is_running), 200
 
 def run():
     app.run(host=config.WEB_ADDRESS, port=config.WEB_PORT, threaded=True)
