@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div align="center">
+    <h1>Shake</h1>
+    <div id="result"></div>
+</div>
+
+<fieldset data-role="controlgroup">
+    {% for id, course in courses.items() %}
+    <input type="radio" name="coursePick" id="radio-choice-v-{{ id }}a" value="{{ id }}"
+     {% if id == 1 %}checked{% endif %}>
+    <label for="radio-choice-v-{{ id }}a">{{ course.name }}</label>
+    {% endfor %}
+
+</fieldset>
+
+{% endblock %}
